@@ -30,5 +30,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-console.log('1');
