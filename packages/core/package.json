@@ -20,7 +20,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "eslint . --max-warnings 0"
+    "lint": "eslint . --max-warnings 0",
+    "publish": "pnpm publish --access public --no-git-checks"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
