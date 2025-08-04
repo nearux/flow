@@ -8,6 +8,15 @@ import prettier from 'eslint-config-prettier';
 export default [
   js.configs.recommended,
   {
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/build/**',
+      '**/coverage/**',
+    ],
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: typescriptParser,
