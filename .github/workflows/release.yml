@@ -132,13 +132,10 @@ jobs:
           pnpm version ${{ steps.versions.outputs.new_shared_version }} --no-git-tag-version
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.versions.outputs.new_core_version }}
-          release_name: Release v${{ steps.versions.outputs.new_core_version }}
+          name: Release v${{ steps.versions.outputs.new_core_version }}
           body: |
             ## Changes in this release
 
@@ -150,6 +147,8 @@ jobs:
             - **@nearux/shared**: Shared utilities and types
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to npm
         run: |
