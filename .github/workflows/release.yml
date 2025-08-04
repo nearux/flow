@@ -90,7 +90,7 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Get current versions and generate new versions
+      - name: Get current versions
         id: versions
         run: |
           # Get current versions from package.json files
@@ -100,47 +100,18 @@ jobs:
           echo "core_version=$CORE_VERSION" >> $GITHUB_OUTPUT
           echo "shared_version=$SHARED_VERSION" >> $GITHUB_OUTPUT
 
-          # Generate new versions by incrementing patch version
-          CORE_MAJOR=$(echo $CORE_VERSION | cut -d. -f1)
-          CORE_MINOR=$(echo $CORE_VERSION | cut -d. -f2)
-          CORE_PATCH=$(echo $CORE_VERSION | cut -d. -f3)
-          NEW_CORE_PATCH=$((CORE_PATCH + 1))
-          NEW_CORE_VERSION="${CORE_MAJOR}.${CORE_MINOR}.${NEW_CORE_PATCH}"
-
-          SHARED_MAJOR=$(echo $SHARED_VERSION | cut -d. -f1)
-          SHARED_MINOR=$(echo $SHARED_VERSION | cut -d. -f2)
-          SHARED_PATCH=$(echo $SHARED_VERSION | cut -d. -f3)
-          NEW_SHARED_PATCH=$((SHARED_PATCH + 1))
-          NEW_SHARED_VERSION="${SHARED_MAJOR}.${SHARED_MINOR}.${NEW_SHARED_PATCH}"
-
-          echo "new_core_version=$NEW_CORE_VERSION" >> $GITHUB_OUTPUT
-          echo "new_shared_version=$NEW_SHARED_VERSION" >> $GITHUB_OUTPUT
-
           echo "Current versions - Core: $CORE_VERSION, Shared: $SHARED_VERSION"
-          echo "New versions - Core: $NEW_CORE_VERSION, Shared: $NEW_SHARED_VERSION"
-
-      - name: Update package versions
-        run: |
-          # Update core package version
-          cd packages/core
-          echo "Updating core package from ${{ steps.versions.outputs.core_version }} to ${{ steps.versions.outputs.new_core_version }}"
-          pnpm version ${{ steps.versions.outputs.new_core_version }} --no-git-tag-version
-
-          # Update shared package version
-          cd ../shared
-          echo "Updating shared package from ${{ steps.versions.outputs.shared_version }} to ${{ steps.versions.outputs.new_shared_version }}"
-          pnpm version ${{ steps.versions.outputs.new_shared_version }} --no-git-tag-version
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ steps.versions.outputs.new_core_version }}
-          name: Release v${{ steps.versions.outputs.new_core_version }}
+          tag_name: v${{ steps.versions.outputs.core_version }}
+          name: Release v${{ steps.versions.outputs.core_version }}
           body: |
             ## Changes in this release
 
-            - Updated @nearux/flow to v${{ steps.versions.outputs.new_core_version }}
-            - Updated @nearux/shared to v${{ steps.versions.outputs.new_shared_version }}
+            - @nearux/flow v${{ steps.versions.outputs.core_version }}
+            - @nearux/shared v${{ steps.versions.outputs.shared_version }}
 
             ### Packages
             - **@nearux/flow**: React components and utilities
@@ -157,11 +128,3 @@ jobs:
           cd ../shared && pnpm publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Commit version changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add .
-          git commit -m "chore: bump version to v${{ steps.versions.outputs.new_core_version }}"
-          git push
