@@ -90,29 +90,46 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Get version
-        id: get_version
+      - name: Get current versions and generate new versions
+        id: versions
         run: |
-          # Get the latest version from git tags
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          # Get current versions from package.json files
+          CORE_VERSION=$(node -p "require('./packages/core/package.json').version")
+          SHARED_VERSION=$(node -p "require('./packages/shared/package.json').version")
 
-          # Generate new version based on commit count
-          NEW_VERSION=$(echo $LATEST_TAG | sed 's/v//')
-          MAJOR=$(echo $NEW_VERSION | cut -d. -f1)
-          MINOR=$(echo $NEW_VERSION | cut -d. -f2)
-          PATCH=$(echo $NEW_VERSION | cut -d. -f3)
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "core_version=$CORE_VERSION" >> $GITHUB_OUTPUT
+          echo "shared_version=$SHARED_VERSION" >> $GITHUB_OUTPUT
+
+          # Generate new versions by incrementing patch version
+          CORE_MAJOR=$(echo $CORE_VERSION | cut -d. -f1)
+          CORE_MINOR=$(echo $CORE_VERSION | cut -d. -f2)
+          CORE_PATCH=$(echo $CORE_VERSION | cut -d. -f3)
+          NEW_CORE_PATCH=$((CORE_PATCH + 1))
+          NEW_CORE_VERSION="${CORE_MAJOR}.${CORE_MINOR}.${NEW_CORE_PATCH}"
+
+          SHARED_MAJOR=$(echo $SHARED_VERSION | cut -d. -f1)
+          SHARED_MINOR=$(echo $SHARED_VERSION | cut -d. -f2)
+          SHARED_PATCH=$(echo $SHARED_VERSION | cut -d. -f3)
+          NEW_SHARED_PATCH=$((SHARED_PATCH + 1))
+          NEW_SHARED_VERSION="${SHARED_MAJOR}.${SHARED_MINOR}.${NEW_SHARED_PATCH}"
+
+          echo "new_core_version=$NEW_CORE_VERSION" >> $GITHUB_OUTPUT
+          echo "new_shared_version=$NEW_SHARED_VERSION" >> $GITHUB_OUTPUT
+
+          echo "Current versions - Core: $CORE_VERSION, Shared: $SHARED_VERSION"
+          echo "New versions - Core: $NEW_CORE_VERSION, Shared: $NEW_SHARED_VERSION"
 
       - name: Update package versions
         run: |
+          # Update core package version
           cd packages/core
-          pnpm version ${{ steps.get_version.outputs.new_version }} --no-git-tag-version
+          echo "Updating core package from ${{ steps.versions.outputs.core_version }} to ${{ steps.versions.outputs.new_core_version }}"
+          pnpm version ${{ steps.versions.outputs.new_core_version }} --no-git-tag-version
 
+          # Update shared package version
           cd ../shared
-          pnpm version ${{ steps.get_version.outputs.new_version }} --no-git-tag-version
+          echo "Updating shared package from ${{ steps.versions.outputs.shared_version }} to ${{ steps.versions.outputs.new_shared_version }}"
+          pnpm version ${{ steps.versions.outputs.new_shared_version }} --no-git-tag-version
 
       - name: Create Release
         id: create_release
@@ -120,13 +137,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ steps.get_version.outputs.new_version }}
-          release_name: Release v${{ steps.get_version.outputs.new_version }}
+          tag_name: v${{ steps.versions.outputs.new_core_version }}
+          release_name: Release v${{ steps.versions.outputs.new_core_version }}
           body: |
             ## Changes in this release
 
-            - Updated @nearux/flow to v${{ steps.get_version.outputs.new_version }}
-            - Updated @nearux/shared to v${{ steps.get_version.outputs.new_version }}
+            - Updated @nearux/flow to v${{ steps.versions.outputs.new_core_version }}
+            - Updated @nearux/shared to v${{ steps.versions.outputs.new_shared_version }}
 
             ### Packages
             - **@nearux/flow**: React components and utilities
@@ -147,5 +164,5 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add .
-          git commit -m "chore: bump version to v${{ steps.get_version.outputs.new_version }}"
+          git commit -m "chore: bump version to v${{ steps.versions.outputs.new_core_version }}"
           git push
