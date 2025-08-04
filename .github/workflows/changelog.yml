@@ -1,70 +1,63 @@
 name: Generate Changelog
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [published]
 
 jobs:
   changelog:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies
-        run: pnpm install
-
       - name: Generate changelog
         id: changelog
         uses: actions/github-script@v7
         with:
           script: |
+            // Get commits since the last release
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 2
+            });
+
+            let sinceDate;
+            if (releases.length > 1) {
+              // Get the previous release date
+              const previousRelease = releases[1];
+              sinceDate = new Date(previousRelease.published_at);
+            } else {
+              // If this is the first release, get commits from the last 7 days
+              sinceDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            }
+
             const { data: commits } = await github.rest.repos.listCommits({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              since: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Last 24 hours
+              since: sinceDate.toISOString(),
               per_page: 100
             });
 
             const changes = commits
               .filter(commit => !commit.commit.message.includes('chore: bump version'))
+              .filter(commit => !commit.commit.message.includes('Merge'))
               .map(commit => `- ${commit.commit.message.split('\n')[0]}`)
               .join('\n');
 
+            console.log('Generated changelog:', changes);
             return changes || '- No significant changes';
 
       - name: Update release notes
-        if: steps.changelog.outputs.result
         uses: actions/github-script@v7
         with:
           script: |
+            const changelog = '${{ steps.changelog.outputs.result }}';
+            console.log('Changelog to update:', changelog);
+
             const { data: releases } = await github.rest.repos.listReleases({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -73,12 +66,18 @@ jobs:
 
             if (releases.length > 0) {
               const latestRelease = releases[0];
-              const changelog = '${{ steps.changelog.outputs.result }}';
+              console.log('Updating release:', latestRelease.id);
+              
+              const updatedBody = `${latestRelease.body}\n\n## Recent Changes\n${changelog}`;
               
               await github.rest.repos.updateRelease({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 release_id: latestRelease.id,
-                body: `${latestRelease.body}\n\n## Recent Changes\n${changelog}`
+                body: updatedBody
               });
+              
+              console.log('Release updated successfully');
+            } else {
+              console.log('No releases found');
             }

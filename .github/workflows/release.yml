@@ -49,33 +49,10 @@ jobs:
       - name: Run linting
         run: pnpm lint
 
-  check-changes:
+  release:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    outputs:
-      should-release: ${{ steps.changes.outputs.any }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Check for changes
-        id: changes
-        uses: dorny/paths-filter@v2
-        with:
-          filters: |
-            packages:
-              - 'packages/core/**'
-              - 'packages/shared/**'
-            apps:
-              - 'apps/**'
-
-  release:
-    needs: [build, check-changes]
-    runs-on: ubuntu-latest
-    if: needs.check-changes.outputs.should-release == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
