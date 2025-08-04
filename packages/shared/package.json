@@ -1,6 +1,6 @@
 {
   "name": "@nearux/shared",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -14,7 +14,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "eslint src/ --config ../../eslint.config.mjs --max-warnings 0",
-    "publish": "pnpm publish --access public --no-git-checks"
+    "release": "pnpm publish --access public --no-git-checks"
   },
   "devDependencies": {
     "tsup": "^8.0.0"
