@@ -34,22 +34,19 @@ export default [
       tailwindcss: tailwindcss,
     },
     rules: {
-      // TypeScript 규칙
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': 'warn',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['error'],
 
-      // Next.js 규칙
       '@next/next/no-html-link-for-pages': 'off',
 
-      // 일반 규칙
       'no-console': 'warn',
 
       'no-undef': 'off',
 
-      // Tailwind CSS 규칙
       'tailwindcss/no-custom-classname': 'off',
       'tailwindcss/classnames-order': 'error',
     },
   },
-  prettier, // Prettier와 충돌 방지
+  prettier,
 ];
